@@ -1,7 +1,6 @@
 Twitter Activity in Qatar v1.0
 =========================
 
-<h4>Project Overview</h4>
 
 The objective of this project was to create a map that provides spatio-temporal information about the population of Qatar, by applying various filters to the tweets and categorizing them in various ways. Using the same framework for the map and data plotting using Google Fusion Tables, as was done in Project 1, the availability of three main filters on the website forms the crux of this project.
 
