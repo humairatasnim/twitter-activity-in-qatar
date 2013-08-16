@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<!--[if IE 8]> 				 <html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width" />
+  <meta name="description" content="Twitter Usage in Qatar" />
+  <meta name="copyright" content="Qatar Computing Research Institute" />
+
+  <title>Twitter Usage in Qatar</title>
+
+  <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:300' rel='stylesheet' type='text/css'>
+
+  <script type="text/javascript" src="https://maps.google.com/maps/api/js?sensor=false"></script>
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+  <script type="text/javascript" src="js/infobubble.js"></script>
+
+  <script type="text/javascript">
+    var map;
+    var infoBubble = new InfoBubble();
+    var markersArray = [];
+
+    var style = [    
+      {"stylers": [{"visibility": "off"}]},
+      
+      {"featureType": "road", "stylers": [{"visibility": "on"}, {"color": "#ffffff"}]},
+      
+      {"featureType": "road.arterial", "stylers": [{"visibility": "on"}, {"color": "#fee379"}]},
+      
+      {"featureType": "road.highway", "stylers": [{"visibility": "on"}, {"color": "#fee379"}]},
+
+      {"featureType": "landscape", "stylers": [{"visibility": "on"}, {"color": "#f8f8f8"}]},
+
+      {"featureType": "water", "stylers": [{"visibility": "on"}, {"color": "#a1d7f2"}]},
+
+      {"featureType": "road", "elementType": "labels", "stylers": [{"visibility": "off"}]},
+
+      {"featureType": "poi.park", "elementType": "geometry.fill", "stylers": [{"visibility": "off"}, {"color": "#83cead"}]},
+
+      {"elementType": "labels.text.fill", "stylers": [{"visibility": "on"}, {"color": "#a1a9a9"}]},
+      
+      {"featureType": "landscape.man_made", "elementType": "geometry", "stylers": [{"weight": 0.9}, {"visibility": "off"}]}
+    ]
+    
+    // Fusion Table variables
+    var apiKey = 'AIzaSyCVYOQQGT4yQJqmuDu5wMxCpQdCyKpj-Tc';
+    var tableID = '1U0IzLGIsOoOxluEFZNd7Z7bPB8UwvX-ENvtpa3Q';
+
+    function initialize() {
+      fetchData();
+      var mapOptions = {
+        zoom: 10,
+        center: new google.maps.LatLng(25.3, 51.4),
+        disableDefaultUI:true,
+        zoomControl:true,
+        zoomControlOptions: {
+          style:google.maps.ZoomControlStyle.SMALL,
+          position: google.maps.ControlPosition.LEFT_TOP
+        },
+        styles: style,
+        mapTypeId: google.maps.MapTypeId.ROADMAP
+      };
+      map = new google.maps.Map(document.getElementById('map-canvas'),mapOptions);
+
+      google.maps.event.addDomListener(document.getElementById('ar'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('en'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('tl'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('other'),'click', function() {
+        reinitialize();
+      });
+
+      google.maps.event.addDomListener(document.getElementById('sunday'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('monday'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('tuesday'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('wednesday'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('thursday'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('friday'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('saturday'),'click', function() {
+        reinitialize();
+      });
+
+      google.maps.event.addDomListener(document.getElementById('earlymorning'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('latemorning'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('earlyafternoon'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('lateafternoon'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('earlyevening'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('lateevening'),'click', function() {
+        reinitialize();
+      });
+      google.maps.event.addDomListener(document.getElementById('night'),'click', function() {
+        reinitialize();
+      });
+    }
+
+    function reinitialize() {
+      fetchData();
+      deleteOverlays();
+    }
+
+    function fetchData() {
+      var where = generateWhere();
+      var query = 'SELECT latitude, longitude, SUM(count) FROM ' + tableID + ' WHERE ' + where + ' GROUP BY latitude, longitude';
+      // alert(query);
+
+      var encodedQuery = encodeURIComponent(query);
+
+      // Construct the URL
+      var url = ['https://www.googleapis.com/fusiontables/v1/query'];
+      url.push('?sql=' + encodedQuery);
+      url.push('&key=' + apiKey);
+      url.push('&callback=?');
+
+      // Send the JSONP request using jQuery
+      $.ajax({
+        url: url.join(''),
+        dataType: 'jsonp',
+        success: onDataFetched
+      });
+    }
+
+    // Generate a where clause from the checkboxes. If no boxes
+    // are checked, return an empty string.
+    function generateWhere() {
+
+      var langfilter = [];
+      var langs = document.getElementsByName('lang');
+      for (var i = 0, lang; lang = langs[i]; i++) {
+        if (lang.checked) {
+          var langName = lang.value.replace(/'/g, '\\\'');
+          langfilter.push("'" + langName + "'");
+        }
+      }
+
+      var dayfilter = [];
+      var days = document.getElementsByName('day');
+      for (var i = 0, day; day = days[i]; i++) {
+        if (day.checked) {
+          var dayName = day.value.replace(/'/g, '\\\'');
+          dayfilter.push("'" + dayName + "'");
+        }
+      }
+
+      var timefilter = [];
+      var times = document.getElementsByName('time');
+      for (var i = 0, time; time = times[i]; i++) {
+        if (time.checked) {
+          var timeName = time.value.replace(/'/g, '\\\'');
+          timefilter.push("'" + timeName + "'");
+        }
+      }
+
+      var where = '';
+
+      if (langfilter.length && dayfilter.length && timefilter.length) {
+        where = "language IN (" + langfilter.join(',') + ") AND dayofweek IN (" + dayfilter.join(',') + ") AND timeofday IN (" + timefilter.join(',') + ")";
+      }
+      return where;
+    }
+
+    function onDataFetched(data) {
+      var rows = data['rows'];
+      var coordinate;
+      var contentString;
+
+      for (var i in rows) {
+        coordinate = new google.maps.LatLng(rows[i][0],rows[i][1]);
+        var sumcount = rows[i][2];
+        if (sumcount == 1) {
+          contentString = '<div class="infowindow">' + sumcount + ' tweet</div>';
+        }
+        else {
+          contentString = '<div class="infowindow">' + sumcount + ' tweets</div>';
+        }
+        createMarker(coordinate,contentString);
+      }
+    }
+
+    function createMarker (coordinate,contentString) {
+      var marker = new google.maps.Marker({
+        map: map,
+        position: coordinate
+      });
+      markersArray.push(marker);
+      google.maps.event.addListener(marker, 'click', function(event) {
+        infoBubble.setPosition(coordinate);
+        infoBubble.setContent(contentString);
+        infoBubble.open(map);
+      });
+    }
+
+    // Deletes all markers in the array by removing references to them.
+    function deleteOverlays() {
+      for (var i = 0; i < markersArray.length; i++ ) {
+        markersArray[i].setMap(null);
+      }
+      markersArray = [];
+    }
+
+    google.maps.event.addDomListener(window, 'load', initialize);
+</script>
+
+<style>
+  html {
+    height: 100%;
+  }
+  body {
+    margin: 0px;
+    padding: 0px;
+    height: 100%;
+    font-family: "Source Sans Pro","Helvetica Neue","Helvetica",Helvetica,Arial,sans-serif;
+  }
+  #map-canvas {
+    height: 100%;
+    position: fixed !important;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 0;
+  }
+  .infowindow {
+    padding: 15px;
+    max-width: none !important;
+    color: #16A085;
+  }
+  .overlay {
+    position: absolute;
+    top: 0;
+    right: 15px;
+    bottom: 0;
+    z-index: 100;
+  }
+  .checkboxes {
+    padding: 10px 20px;
+    width: 240px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 4px;
+    margin-top: 15px;
+  }
+  .checkboxes h3 {
+    margin: 0px;
+    padding-bottom: 10px;
+    color: #34495E;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 18px;
+  }
+  .checkboxes h3 img {
+    margin-right: 7px;
+  }
+  .checkboxes label span {
+    font-size: 12px;
+    color: #bfbfbf;
+  }
+  .checkboxes input {
+    margin-bottom: 8px;
+  }
+  .checkboxes label, input[type="checkbox"] {
+    cursor:pointer;
+    color: #bfbfbf;
+  }
+  .checkboxes .check-with-label:checked + .label-for-check {
+    color: #16A085;
+  }
+  .checkboxes .check-with-label:checked + .label-for-check span {
+    color: #34495E;
+  }
+</style>
+</head>
+<body>
+  <div id="map-canvas"></div>
+
+  <div class="overlay">
+
+    <div class="checkboxes lang">
+      <h3><img src="img/world.png" width='15'/>Languages</h3>
+
+      <input type="checkbox" checked="checked" name="lang" id="ar" value="ar" class="check-with-label">
+      <label for="ar" class="label-for-check">Arabic</label><br/>
+
+      <input type="checkbox" checked="checked" name="lang" id="en" value="en" class="check-with-label">
+      <label for="en" class="label-for-check">English</label><br/>
+
+      <input type="checkbox" checked="checked" name="lang" id="tl" value="tl" class="check-with-label">
+      <label for="tl" class="label-for-check">Tagalog</label><br/>
+
+      <input type="checkbox" checked="checked" name="lang" id="other" value="other" class="check-with-label">
+      <label for="other" class="label-for-check">Other</label>
+    </div>
+
+    <div class="checkboxes day">
+      <h3><img src="img/calendar.png" width='15'/>Days of the Week</h3>
+
+      <input type="checkbox" checked="checked" name="day" id="sunday" value="Sunday" class="check-with-label">
+      <label for="sunday" class="label-for-check">Sunday</label><br/>
+
+      <input type="checkbox" checked="checked" name="day" id="monday" value="Monday" class="check-with-label">
+      <label for="monday" class="label-for-check">Monday</label><br/>
+      
+      <input type="checkbox" checked="checked" name="day" id="tuesday" value="Tuesday" class="check-with-label">
+      <label for="tuesday" class="label-for-check">Tuesday</label><br/>
+      
+      <input type="checkbox" checked="checked" name="day" id="wednesday" value="Wednesday" class="check-with-label">
+      <label for="wednesday" class="label-for-check">Wednesday</label><br/>
+
+      <input type="checkbox" checked="checked" name="day" id="thursday" value="Thursday" class="check-with-label">
+      <label for="thursday" class="label-for-check">Thursday</label><br/>
+      
+      <input type="checkbox" checked="checked" name="day" id="friday" value="Friday" class="check-with-label">
+      <label for="friday" class="label-for-check">Friday</label><br/>
+      
+      <input type="checkbox" checked="checked" name="day" id="saturday" value="Saturday" class="check-with-label">
+      <label for="saturday" class="label-for-check">Saturday</label>
+    </div>
+
+    <div class="checkboxes time">
+      <h3><img src="img/clock.png" width='15'/>Times of the Day</h3>
+
+      <input type="checkbox" checked="checked" name="time" id="earlymorning" value="early morning" class="check-with-label">
+      <label for="earlymorning" class="label-for-check">Early morning&nbsp;&nbsp;<span>(5am - 8am)</span></label><br/>
+
+      <input type="checkbox" checked="checked" name="time" id="latemorning" value="late morning" class="check-with-label">
+      <label for="latemorning" class="label-for-check">Late morning&nbsp;&nbsp;<span>(8am - 12pm)</label><br/>
+
+      <input type="checkbox" checked="checked" name="time" id="earlyafternoon" value="early afternoon" class="check-with-label">
+      <label for="earlyafternoon" class="label-for-check">Early afternoon&nbsp;&nbsp;<span>(12pm - 3pm)</label><br/>
+
+      <input type="checkbox" checked="checked" name="time" id="lateafternoon" value="late afternoon" class="check-with-label">
+      <label for="lateafternoon" class="label-for-check">Late afternoon&nbsp;&nbsp;<span>(3pm - 6pm)</label><br/>
+      
+      <input type="checkbox" checked="checked" name="time" id="earlyevening" value="early evening" class="check-with-label">
+      <label for="earlyevening" class="label-for-check">Early evening&nbsp;&nbsp;<span>(6pm - 8pm)</label><br/>
+
+      <input type="checkbox" checked="checked" name="time" id="lateevening" value="late evening" class="check-with-label">
+      <label for="lateevening" class="label-for-check">Late evening&nbsp;&nbsp;<span>(8pm - 11pm)</label><br/>
+      
+      <input type="checkbox" checked="checked" name="time" id="night" value="night" class="check-with-label">
+      <label for="night" class="label-for-check">Night&nbsp;&nbsp;<span>(11pm - 5am)</label>
+
+    </div>
+  </div>
+
+</body>
+</html>
